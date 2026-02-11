@@ -8,7 +8,7 @@
 
 | プラットフォーム | 最小バージョン | 備考 |
 |----------------|--------------|------|
-| iOS | 17.0+ | iPhone メインアプリ |
+| iOS | 26.0+ | iPhone メインアプリ（Foundation Models対応） |
 | watchOS | 10.0+ | Apple Watch アプリ |
 
 ## 3. 機能要件
@@ -51,21 +51,50 @@
 | BRD-004 | 金額算出 | 喫煙本数から消費金額を自動算出 |
 | BRD-005 | 累計金額表示 | 日別・月別・年間の累計金額を表示 |
 
-### 3.5 HealthKit連携機能
+### 3.5 目標設定機能
+
+| 機能ID | 機能名 | 詳細 |
+|--------|-------|------|
+| GOL-001 | 目標本数設定 | 1日の目標本数を設定できる |
+| GOL-002 | 達成状況表示 | 目標に対する達成状況を表示（残り本数など） |
+| GOL-003 | 目標達成インジケータ | 目標達成/超過を視覚的に表示 |
+
+### 3.6 喫煙履歴機能
+
+| 機能ID | 機能名 | 詳細 |
+|--------|-------|------|
+| HST-001 | 時刻記録 | 喫煙した時刻を記録する |
+| HST-002 | 履歴一覧表示 | 今日の喫煙時刻を一覧で表示 |
+| HST-003 | 履歴削除 | 誤って記録した履歴を個別に削除できる |
+| HST-004 | 間隔表示 | 前回の喫煙からの経過時間を表示 |
+
+### 3.7 HealthKit連携機能
 
 | 機能ID | 機能名 | 詳細 |
 |--------|-------|------|
 | HLT-001 | HealthKit認証 | HealthKitへのアクセス許可を取得 |
-| HLT-002 | データ登録 | 喫煙データをHealthKitに登録 |
+| HLT-002 | データ登録 | 喫煙データをHealthKitにカスタムデータとして登録 |
 | HLT-003 | 連携ON/OFF | HealthKit連携の有効/無効を切り替え |
 
-### 3.6 データ同期機能
+### 3.8 データ同期機能
 
 | 機能ID | 機能名 | 詳細 |
 |--------|-------|------|
 | SYN-001 | iCloud同期 | iPhone-Watch間でデータを自動同期 |
 | SYN-002 | バックアップ | iCloudにデータを自動バックアップ |
 | SYN-003 | 復元 | iCloudからデータを復元 |
+
+### 3.9 AIニュース機能（Foundation Models）
+
+| 機能ID | 機能名 | 詳細 |
+|--------|-------|------|
+| AIN-001 | 記事取得 | Google News RSSからタバコ関連記事を自動取得 |
+| AIN-002 | AI要約 | Foundation Modelsを使用して記事を要約 |
+| AIN-003 | カテゴリ分類 | AIが記事を自動分類（節煙、健康、新商品、業界） |
+| AIN-004 | おすすめ度計算 | ユーザーの喫煙データに基づきおすすめ度を算出 |
+| AIN-005 | 記事一覧表示 | カテゴリフィルター付きの記事一覧を表示 |
+| AIN-006 | 記事詳細表示 | 記事の詳細とAI要約を表示 |
+| AIN-007 | オフライン対応 | Foundation Modelsはオンデバイスで動作、オフラインでもAI機能利用可能 |
 
 ## 4. 非機能要件
 
@@ -150,16 +179,19 @@ graph TB
 
 | 画面ID | 画面名 | 概要 |
 |--------|-------|------|
-| SCR-001 | ホーム画面 | 今日のカウント表示、カウントアップボタン |
-| SCR-002 | 統計画面 | 日別・月別・年間グラフ、金額集計 |
-| SCR-003 | 設定画面 | 銘柄設定、金額設定、HealthKit連携 |
+| SCR-001 | ホーム画面 | 今日のカウント表示、カウントアップボタン、目標達成状況、今日の履歴（コンパクト表示） |
+| SCR-002 | AIニュース画面 | タバコ関連記事一覧、カテゴリフィルター、AI要約表示 |
+| SCR-003 | 統計画面 | 日別・月別・年間グラフ、金額集計 |
+| SCR-004 | 設定画面 | 銘柄設定、金額設定、目標本数設定、HealthKit連携 |
+| SCR-005 | 記事詳細画面 | 記事の詳細表示、AI要約の全文、関連記事 |
 
 ### 6.2 Apple Watch アプリ
 
 | 画面ID | 画面名 | 概要 |
 |--------|-------|------|
-| WCH-001 | メイン画面 | 今日のカウント表示、カウントアップボタン |
-| WCH-002 | 簡易統計画面 | 直近7日間の推移 |
+| WCH-001 | メイン画面 | 今日のカウント表示、カウントアップボタン、目標達成状況 |
+| WCH-002 | 履歴画面 | 今日の喫煙時刻一覧 |
+| WCH-003 | 簡易統計画面 | 直近7日間の推移 |
 
 ### 6.3 画面遷移図
 
@@ -167,20 +199,29 @@ graph TB
 graph LR
     subgraph iPhone [iPhone App]
         Home[ホーム画面]
+        AINews[AIニュース画面]
+        ArticleDetail[記事詳細画面]
         Stats[統計画面]
         Settings[設定画面]
         
+        Home --> AINews
         Home --> Stats
         Home --> Settings
+        AINews --> ArticleDetail
+        AINews --> Home
+        ArticleDetail --> AINews
         Stats --> Home
         Settings --> Home
     end
     
     subgraph Watch [Watch App]
         WatchHome[メイン画面]
+        WatchHistory[履歴画面]
         WatchStats[簡易統計]
         
+        WatchHome --> WatchHistory
         WatchHome --> WatchStats
+        WatchHistory --> WatchHome
         WatchStats --> WatchHome
     end
 ```
@@ -216,6 +257,7 @@ erDiagram
         UUID id PK
         Bool healthKitEnabled
         UUID activeBrandId FK
+        Int dailyGoal
     }
     
     SmokingRecord ||--o{ DailySummary : "aggregates"
@@ -254,18 +296,21 @@ erDiagram
 | id | UUID | 一意識別子 |
 | healthKitEnabled | Bool | HealthKit連携の有効/無効 |
 | activeBrandId | UUID | 現在選択中の銘柄ID |
+| dailyGoal | Int? | 1日の目標本数（nil: 目標未設定） |
 
 ## 8. 技術スタック
 
 | カテゴリ | 技術 | バージョン |
 |---------|-----|-----------|
-| 言語 | Swift | 5.9+ |
+| 言語 | Swift | 6.0+ |
 | UIフレームワーク | SwiftUI | - |
 | データ永続化 | SwiftData | - |
 | 同期 | CloudKit | - |
 | ヘルスケア | HealthKit | - |
 | ウィジェット | WidgetKit | - |
 | グラフ描画 | Swift Charts | - |
+| AI/LLM | Foundation Models | iOS 26+ |
+| RSS解析 | XMLParser | - |
 
 ## 9. 今後の拡張候補
 
@@ -273,8 +318,6 @@ erDiagram
 
 | 機能 | 概要 |
 |-----|------|
-| 目標設定 | 1日の目標本数を設定し、達成状況を表示 |
 | 通知機能 | 目標達成時や一定時間経過時に通知 |
-| 喫煙時刻履歴 | いつ喫煙したかの詳細履歴を表示 |
 | 複数銘柄対応 | 複数の銘柄を登録し、記録時に選択 |
 | データエクスポート | CSVやPDFでデータを出力 |

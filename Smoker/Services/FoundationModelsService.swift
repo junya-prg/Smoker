@@ -1,0 +1,502 @@
+//
+//  FoundationModelsService.swift
+//  SmokeCounter
+//
+//  Foundation Modelsフレームワークを使用したAI処理サービス
+//  iOS 26以降でApple Intelligenceのオンデバイスモデルを使用
+//
+
+import Foundation
+import Combine
+import FoundationModels
+
+/// ユーザーの喫煙データ（おすすめ度計算用）
+struct UserSmokingData {
+    /// 1日の平均喫煙本数
+    let averageDailyCount: Int
+    
+    /// 目標本数
+    let dailyGoal: Int?
+    
+    /// 節煙傾向（減少中かどうか）
+    let isDecreasing: Bool
+}
+
+// MARK: - エラー定義
+
+/// Foundation Models関連のエラー
+enum FoundationModelsError: LocalizedError {
+    case modelNotAvailable
+    case sessionNotAvailable
+    case summarizationFailed(Error)
+    case categorizationFailed(Error)
+    case relevanceCalculationFailed(Error)
+    
+    var errorDescription: String? {
+        switch self {
+        case .modelNotAvailable:
+            return "Apple Intelligenceが利用できません。デバイスの設定を確認してください。"
+        case .sessionNotAvailable:
+            return "AIセッションが利用できません"
+        case .summarizationFailed(let error):
+            return "要約の生成に失敗しました: \(error.localizedDescription)"
+        case .categorizationFailed(let error):
+            return "カテゴリ分類に失敗しました: \(error.localizedDescription)"
+        case .relevanceCalculationFailed(let error):
+            return "おすすめ度の計算に失敗しました: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Foundation Models実装
+
+/// Foundation Modelsを使用したAI処理サービス
+@available(iOS 26.0, macOS 26.0, *)
+@MainActor
+class FoundationModelsService: ObservableObject {
+    /// 処理中かどうか
+    @Published private(set) var isProcessing = false
+    
+    /// エラーメッセージ
+    @Published var errorMessage: String?
+    
+    /// isAvailableのキャッシュ（初回チェック後に保存）
+    private var _isAvailableCache: Bool?
+    
+    /// Foundation Modelsが利用可能かどうか（初期値、UIの初期表示用）
+    var isAvailable: Bool {
+        // キャッシュがあればそれを返す
+        if let cached = _isAvailableCache {
+            return cached
+        }
+        // 初回は常にtrueを返し、実際の処理時にチェック
+        return true
+    }
+    
+    /// AIが実際に利用可能かどうか（ensureAIReady後に確定）
+    var isActuallyAvailable: Bool {
+        return _isAvailableCache ?? false
+    }
+    
+    /// Foundation Modelsの利用可能性を実際にチェック（非同期）
+    func checkAvailability() async -> Bool {
+        print("🤖 Foundation Models利用可能性チェック中...")
+        let available = SystemLanguageModel.default.isAvailable
+        print("🤖 Foundation Models isAvailable: \(available)")
+        _isAvailableCache = available
+        return available
+    }
+    
+    // MARK: - 要約生成
+    
+    /// 記事を要約
+    /// - Parameter article: 要約対象の記事
+    /// - Returns: 要約テキスト
+    func summarize(article: Article) async -> String {
+        guard _isAvailableCache == true else {
+            return article.description ?? "要約を生成できません"
+        }
+        
+        let content = article.description ?? article.title
+        
+        let session = LanguageModelSession(instructions: """
+            あなたはニュース記事の要約を作成するアシスタントです。
+            以下のルールに従って要約してください：
+            - 日本語で2-3文で簡潔に要約
+            - 喫煙者にとって重要なポイントを強調
+            - 客観的な情報のみを含める
+            """)
+        
+        do {
+            let response = try await session.respond(to: """
+                以下のタバコ関連ニュース記事を要約してください。
+                
+                タイトル: \(article.title)
+                内容: \(content)
+                """)
+            return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            print("要約生成エラー: \(error)")
+            return article.description ?? "要約を生成できませんでした"
+        }
+    }
+    
+    // MARK: - カテゴリ分類
+    
+    /// 記事をカテゴリ分類
+    /// - Parameter article: 分類対象の記事
+    /// - Returns: 記事カテゴリ
+    func categorize(article: Article) async -> ArticleCategory {
+        guard _isAvailableCache == true else {
+            return fallbackCategorize(article: article)
+        }
+        
+        let content = article.description ?? article.title
+        
+        let session = LanguageModelSession(instructions: """
+            あなたはニュース記事をカテゴリ分類するアシスタントです。
+            以下のカテゴリのいずれかを選んで、カテゴリ名のみを回答してください：
+            - 節煙（禁煙、減煙、節煙に関する記事）
+            - 健康（健康への影響、病気、リスクに関する記事）
+            - 新商品（新製品、新デバイス、発売に関する記事）
+            - 業界（税金、規制、市場、業界動向に関する記事）
+            - その他（上記に該当しない記事）
+            """)
+        
+        do {
+            let response = try await session.respond(to: """
+                以下の記事を最も適切なカテゴリに分類してください。
+                
+                タイトル: \(article.title)
+                内容: \(content)
+                
+                カテゴリ名のみを回答してください。
+                """)
+            
+            let categoryText = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // レスポンスからカテゴリを特定
+            for category in ArticleCategory.allCases {
+                if categoryText.contains(category.rawValue) {
+                    return category
+                }
+            }
+            return .other
+        } catch {
+            print("カテゴリ分類エラー: \(error)")
+            return fallbackCategorize(article: article)
+        }
+    }
+    
+    // MARK: - おすすめ度計算
+    
+    /// おすすめ度を計算
+    /// - Parameters:
+    ///   - article: 対象の記事
+    ///   - userData: ユーザーの喫煙データ
+    /// - Returns: おすすめ度（0.0〜1.0）
+    func calculateRelevance(article: Article, userData: UserSmokingData?) async -> Double {
+        guard _isAvailableCache == true, let userData = userData else {
+            return fallbackCalculateRelevance(article: article, userData: userData)
+        }
+        
+        let content = article.description ?? article.title
+        let goalInfo = userData.dailyGoal.map { "目標本数: \($0)本/日" } ?? "目標未設定"
+        let trendInfo = userData.isDecreasing ? "減少傾向" : "変化なし"
+        
+        let session = LanguageModelSession(instructions: """
+            あなたは喫煙者向けニュースのおすすめ度を評価するアシスタントです。
+            ユーザーの喫煙状況を考慮して、記事の関連性を0から100の数値で評価してください。
+            数値のみを回答してください。
+            """)
+        
+        do {
+            let response = try await session.respond(to: """
+                以下のユーザーにとって、この記事がどれくらい関連性が高いか評価してください。
+                
+                【ユーザー情報】
+                - 1日の平均喫煙本数: \(userData.averageDailyCount)本
+                - \(goalInfo)
+                - 喫煙傾向: \(trendInfo)
+                
+                【記事情報】
+                タイトル: \(article.title)
+                内容: \(content)
+                
+                0から100の数値のみで回答してください。
+                """)
+            
+            let scoreText = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // 数値を抽出
+            let numbers = scoreText.components(separatedBy: CharacterSet.decimalDigits.inverted)
+                .compactMap { Int($0) }
+                .filter { $0 >= 0 && $0 <= 100 }
+            
+            if let score = numbers.first {
+                return Double(score) / 100.0
+            }
+            return 0.5
+        } catch {
+            print("おすすめ度計算エラー: \(error)")
+            return fallbackCalculateRelevance(article: article, userData: userData)
+        }
+    }
+    
+    // MARK: - リラックスメッセージ生成
+    
+    /// リラックスモード用の癒しのメッセージを生成
+    /// - Returns: 気の利いた癒しのメッセージ
+    func generateRelaxMessage() async -> String {
+        // フォールバックメッセージ
+        let fallbackMessages = [
+            "ゆっくりと深呼吸...",
+            "この瞬間を味わって",
+            "心を落ち着けて...",
+            "ひと息つきましょう",
+            "静かな時間を...",
+            "穏やかなひとときを",
+            "リラックス...",
+            "今この瞬間に集中",
+            "心を解き放って",
+            "ゆったりと..."
+        ]
+        
+        guard _isAvailableCache == true else {
+            return fallbackMessages.randomElement() ?? "ゆっくりと..."
+        }
+        
+        let session = LanguageModelSession(instructions: """
+            あなたは喫煙者を癒すメッセージを作成するアシスタントです。
+            以下のルールに従ってください：
+            - 日本語で短い（10文字以内程度）癒しのフレーズを1つだけ生成
+            - 穏やかで詩的な表現
+            - 句読点は最小限に
+            - 余計な説明は不要
+            """)
+        
+        do {
+            let response = try await session.respond(to: """
+                タバコを吸いながらリラックスしている人に向けた、短い癒しのフレーズを1つ生成してください。
+                「ゆっくりと...」「この瞬間を味わって」のような感じで。
+                """)
+            let message = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            // 長すぎる場合はフォールバック
+            if message.count <= 20 {
+                return message
+            }
+            return fallbackMessages.randomElement() ?? "ゆっくりと..."
+        } catch {
+            print("リラックスメッセージ生成エラー: \(error)")
+            return fallbackMessages.randomElement() ?? "ゆっくりと..."
+        }
+    }
+    
+    // MARK: - 一括処理
+    
+    /// 複数の記事を一括処理
+    /// - Parameters:
+    ///   - articles: 処理対象の記事配列
+    ///   - userData: ユーザーの喫煙データ
+    /// - Returns: AI処理済みの記事配列
+    func processArticles(_ articles: [Article], userData: UserSmokingData?) async -> [Article] {
+        isProcessing = true
+        defer { isProcessing = false }
+        
+        print("🤖 processArticles開始: \(articles.count)件の記事")
+        
+        // AIの準備（初回のみテスト実行）
+        await ensureAIReady()
+        
+        guard _isAvailableCache == true else {
+            print("🤖 AIが利用できないため、フォールバック処理を使用します")
+            return processArticlesWithFallback(articles, userData: userData)
+        }
+        
+        print("🤖 Foundation Modelsを使用してAI処理を開始")
+        var processedArticles: [Article] = []
+        
+        for (index, article) in articles.enumerated() {
+            print("🤖 記事 \(index + 1)/\(articles.count) を処理中: \(article.title.prefix(30))...")
+            var processedArticle = article
+            
+            // カテゴリ分類
+            processedArticle.category = await categorize(article: article)
+            
+            // 要約生成
+            processedArticle.aiSummary = await summarize(article: article)
+            
+            // おすすめ度計算
+            processedArticle.relevanceScore = await calculateRelevance(article: article, userData: userData)
+            
+            processedArticles.append(processedArticle)
+        }
+        
+        print("🤖 processArticles完了")
+        // おすすめ度でソート
+        return processedArticles.sorted { ($0.relevanceScore ?? 0) > ($1.relevanceScore ?? 0) }
+    }
+    
+    // MARK: - 1件ずつ処理（ストリーミング用）
+    
+    /// 1件の記事をAI処理
+    /// - Parameters:
+    ///   - article: 処理対象の記事
+    ///   - userData: ユーザーの喫煙データ
+    /// - Returns: AI処理済みの記事
+    func processOneArticle(_ article: Article, userData: UserSmokingData?) async -> Article {
+        // AIが利用できない場合はフォールバック
+        guard _isAvailableCache == true else {
+            return processOneArticleWithFallback(article, userData: userData)
+        }
+        
+        var processedArticle = article
+        
+        // カテゴリ分類
+        processedArticle.category = await categorize(article: article)
+        
+        // 要約生成
+        processedArticle.aiSummary = await summarize(article: article)
+        
+        // おすすめ度計算
+        processedArticle.relevanceScore = await calculateRelevance(article: article, userData: userData)
+        
+        // AI処理済みフラグを設定
+        processedArticle.isAIProcessed = true
+        
+        return processedArticle
+    }
+    
+    /// 1件の記事をフォールバック処理
+    private func processOneArticleWithFallback(_ article: Article, userData: UserSmokingData?) -> Article {
+        var processedArticle = article
+        processedArticle.category = fallbackCategorize(article: article)
+        processedArticle.aiSummary = nil  // フォールバック時はaiSummaryをnilにして、descriptionを使う
+        processedArticle.relevanceScore = fallbackCalculateRelevance(article: article, userData: userData)
+        processedArticle.isAIProcessed = false  // フォールバック処理
+        return processedArticle
+    }
+    
+    /// AIの初期チェックを実行（最初の1回だけ）
+    /// 注意: isAvailableチェックをスキップして直接テストする（日本語環境対応）
+    func ensureAIReady() async {
+        if _isAvailableCache == nil {
+            // isAvailableチェックをスキップして直接テスト
+            // （日本語環境でisAvailable=falseでも実際には動作する可能性があるため）
+            print("🤖 AI準備チェック開始（isAvailableスキップ方式）")
+            let systemAvailable = SystemLanguageModel.default.isAvailable
+            print("🤖 SystemLanguageModel.default.isAvailable: \(systemAvailable)（参考値）")
+            
+            // 直接テスト実行
+            let testResult = await testAIAvailability()
+            _isAvailableCache = testResult
+            print("🤖 AI実際の動作テスト結果: \(testResult)")
+        }
+    }
+    
+    /// Foundation Modelsが実際に動作するかテスト（タイムアウト付き）
+    /// 日本語でテストを実行して、日本語環境での動作を確認
+    private func testAIAvailability() async -> Bool {
+        print("🤖 AIテスト開始（日本語プロンプト）")
+        
+        do {
+            // withThrowingTaskGroupでタイムアウトを実装
+            return try await withThrowingTaskGroup(of: Bool.self) { group in
+                // AIリクエストタスク
+                group.addTask {
+                    do {
+                        // 日本語のinstructionsでセッションを作成
+                        let session = LanguageModelSession(instructions: "日本語で簡潔に回答してください。")
+                        let response = try await session.respond(to: "「了解」と返答してください。")
+                        print("🤖 AIテスト成功: \(response.content.prefix(30))...")
+                        return true
+                    } catch {
+                        print("🤖 AIテストエラー: \(error)")
+                        return false
+                    }
+                }
+                
+                // タイムアウトタスク（8秒に延長）
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 8_000_000_000)
+                    print("🤖 AIテストタイムアウト（8秒）")
+                    throw CancellationError()
+                }
+                
+                // 最初に完了したタスクの結果を使用
+                guard let result = try await group.next() else {
+                    return false
+                }
+                group.cancelAll()
+                return result
+            }
+        } catch {
+            print("🤖 AIテスト失敗: \(error)")
+            return false
+        }
+    }
+    
+    /// フォールバック処理で記事を一括処理（AI不使用）
+    private func processArticlesWithFallback(_ articles: [Article], userData: UserSmokingData?) -> [Article] {
+        var processedArticles: [Article] = []
+        
+        for article in articles {
+            var processedArticle = article
+            
+            // キーワードベースでカテゴリ分類
+            processedArticle.category = fallbackCategorize(article: article)
+            
+            // descriptionを要約として使用
+            processedArticle.aiSummary = article.description
+            
+            // シンプルなおすすめ度計算
+            processedArticle.relevanceScore = fallbackCalculateRelevance(article: article, userData: userData)
+            
+            processedArticles.append(processedArticle)
+        }
+        
+        // おすすめ度でソート
+        return processedArticles.sorted { ($0.relevanceScore ?? 0) > ($1.relevanceScore ?? 0) }
+    }
+    
+    // MARK: - フォールバック処理
+    
+    /// キーワードベースのカテゴリ分類（フォールバック）
+    private func fallbackCategorize(article: Article) -> ArticleCategory {
+        let text = (article.title + " " + (article.description ?? "")).lowercased()
+        
+        if text.contains("禁煙") || text.contains("節煙") || text.contains("減煙") || text.contains("やめ") {
+            return .quitting
+        } else if text.contains("健康") || text.contains("病気") || text.contains("リスク") || text.contains("害") || text.contains("肺") {
+            return .health
+        } else if text.contains("新") || text.contains("発売") || text.contains("新商品") || text.contains("製品") || text.contains("デバイス") {
+            return .newProducts
+        } else if text.contains("税") || text.contains("値上げ") || text.contains("業界") || text.contains("市場") || text.contains("規制") {
+            return .industry
+        }
+        return .other
+    }
+    
+    /// シンプルなおすすめ度計算（フォールバック）
+    private func fallbackCalculateRelevance(article: Article, userData: UserSmokingData?) -> Double {
+        var score = 0.5
+        let text = (article.title + " " + (article.description ?? "")).lowercased()
+        
+        if let userData = userData {
+            if userData.dailyGoal != nil {
+                if text.contains("禁煙") || text.contains("節煙") {
+                    score += 0.3
+                }
+            }
+            if userData.averageDailyCount > 15 {
+                if text.contains("健康") || text.contains("リスク") {
+                    score += 0.2
+                }
+            }
+            if userData.isDecreasing {
+                if text.contains("成功") || text.contains("コツ") {
+                    score += 0.2
+                }
+            }
+        }
+        
+        let hoursSincePublished = Date().timeIntervalSince(article.publishedAt) / 3600
+        if hoursSincePublished < 24 {
+            score += 0.1
+        }
+        
+        return min(max(score, 0.0), 1.0)
+    }
+}
+
+// MARK: - サービスファクトリ
+
+/// AI処理サービスのファクトリ
+@available(iOS 26.0, macOS 26.0, *)
+struct AIServiceFactory {
+    /// AI処理サービスを取得
+    @MainActor
+    static func createService() -> FoundationModelsService {
+        return FoundationModelsService()
+    }
+}
