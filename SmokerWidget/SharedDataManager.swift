@@ -14,7 +14,7 @@ final class SharedDataManager {
     static let shared = SharedDataManager()
     
     /// App Group識別子
-    static let appGroupIdentifier = "group.jp.junya.SmokeCounter"
+    static let appGroupIdentifier = "group.jp.junya.smoker.data"
     
     /// UserDefaultsのキー
     private enum Keys {

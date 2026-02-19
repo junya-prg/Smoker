@@ -9,7 +9,7 @@
 Apple Developer Portal で以下が登録されていることを確認：
 
 - **App ID**: `jp.junya.Smoker`
-- **App Group**: `group.jp.junya.SmokeCounter`
+- **App Group**: `group.jp.junya.smoker.data`
 
 ### 2. プロビジョニングプロファイル
 

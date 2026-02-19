@@ -11,7 +11,7 @@ import SwiftData
 /// 共有ModelContainerの設定
 enum SharedModelContainer {
     /// App Group識別子
-    static let appGroupIdentifier = "group.jp.junya.SmokeCounter"
+    static let appGroupIdentifier = "group.jp.junya.smoker.data"
     
     /// App GroupのコンテナURL
     static var appGroupContainerURL: URL? {
