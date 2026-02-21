@@ -15,7 +15,7 @@ private let logger = Logger(subsystem: "SmokeCounter", category: "TipJarManager"
 /// チップ商品の種類
 enum TipProduct: String, CaseIterable, Identifiable {
     case coffee = "tip_coffee"      // コーヒー1杯 120円
-    case lunch = "tip_lunch"        // ランチ代 500円
+    case cigarette = "tip_cigarette" // タバコ代 600円
     case support = "tip_support"    // 応援サポート 1,000円
     
     var id: String { rawValue }
@@ -24,7 +24,7 @@ enum TipProduct: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .coffee: return "コーヒー1杯"
-        case .lunch: return "ランチ代"
+        case .cigarette: return "タバコ代"
         case .support: return "応援サポート"
         }
     }
@@ -33,7 +33,7 @@ enum TipProduct: String, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .coffee: return "cup.and.saucer.fill"
-        case .lunch: return "fork.knife"
+        case .cigarette: return "flame.fill"
         case .support: return "heart.fill"
         }
     }
@@ -42,7 +42,7 @@ enum TipProduct: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .coffee: return "開発者にコーヒーを奢る"
-        case .lunch: return "開発者のランチ代を支援"
+        case .cigarette: return "開発者のタバコ代を支援"
         case .support: return "アプリ開発を応援する"
         }
     }

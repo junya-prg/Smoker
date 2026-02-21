@@ -9,13 +9,14 @@ import Foundation
 import SwiftData
 
 /// アプリの設定を表すモデル
+/// CloudKit互換のため、すべてのプロパティにデフォルト値を設定
 @Model
 final class AppSettings {
     /// 一意識別子
-    var id: UUID
+    var id: UUID = UUID()
     
     /// HealthKit連携の有効/無効
-    var healthKitEnabled: Bool
+    var healthKitEnabled: Bool = false
     
     /// 現在選択中の銘柄ID
     var activeBrandId: UUID?
@@ -30,6 +31,10 @@ final class AppSettings {
     /// 背景エフェクトの透明度（0.0〜1.0）
     /// デフォルト値を指定してマイグレーション対応
     var backgroundOpacity: Double = 0.4
+    
+    /// iCloud同期の有効/無効（デフォルトtrue）
+    /// デフォルト値を指定してマイグレーション対応
+    var iCloudSyncEnabled: Bool = true
     
     /// 背景エフェクトの種類（計算プロパティ）
     var backgroundType: RelaxingBackgroundType {
@@ -48,12 +53,14 @@ final class AppSettings {
     ///   - dailyGoal: 1日の目標本数
     ///   - backgroundType: 背景エフェクトの種類（デフォルト: ランダム）
     ///   - backgroundOpacity: 背景の透明度（デフォルト: 0.4）
+    ///   - iCloudSyncEnabled: iCloud同期の有効/無効（デフォルトtrue）
     init(
         healthKitEnabled: Bool = false,
         activeBrandId: UUID? = nil,
         dailyGoal: Int? = nil,
         backgroundType: RelaxingBackgroundType = .random,
-        backgroundOpacity: Double = 0.4
+        backgroundOpacity: Double = 0.4,
+        iCloudSyncEnabled: Bool = true
     ) {
         self.id = UUID()
         self.healthKitEnabled = healthKitEnabled
@@ -61,5 +68,6 @@ final class AppSettings {
         self.dailyGoal = dailyGoal
         self.backgroundTypeRawValue = backgroundType.rawValue
         self.backgroundOpacity = backgroundOpacity
+        self.iCloudSyncEnabled = iCloudSyncEnabled
     }
 }

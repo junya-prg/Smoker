@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// 設定画面
 struct SettingsView: View {
@@ -334,24 +335,265 @@ struct AddBrandView: View {
 
 /// データ管理ビュー
 struct DataManagementView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var records: [SmokingRecord]
+    @Query private var brands: [CigaretteBrand]
+    @Query private var settings: [AppSettings]
+    
+    @State private var iCloudSyncEnabled = SharedModelContainer.isICloudSyncEnabled
+    @State private var showRestartAlert = false
+    @State private var showExportSheet = false
+    @State private var showImportPicker = false
+    @State private var showImportConfirmAlert = false
+    @State private var showImportSuccessAlert = false
+    @State private var showImportErrorAlert = false
+    @State private var importErrorMessage = ""
+    @State private var pendingImportData: Data?
+    @State private var exportFileURL: URL?
+    
+    private var currentSettings: AppSettings? {
+        settings.first
+    }
+    
     var body: some View {
         Form {
-            Section {
-                Text("iCloudでデータが自動的に同期されます")
-                    .foregroundStyle(.secondary)
-            }
-            
-            Section("iCloud同期") {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text("同期が有効です")
-                }
-            }
+            iCloudSyncSection
+            manualBackupSection
+            dataOverviewSection
         }
         .navigationTitle("データ管理")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("アプリの再起動が必要です", isPresented: $showRestartAlert) {
+            Button("OK") { }
+        } message: {
+            Text("iCloud同期の設定を反映するには、アプリを完全に終了して再起動してください。")
+        }
+        .alert("データをインポートしますか？", isPresented: $showImportConfirmAlert) {
+            Button("キャンセル", role: .cancel) {
+                pendingImportData = nil
+            }
+            Button("インポート", role: .destructive) {
+                performImport()
+            }
+        } message: {
+            Text(importConfirmMessage)
+        }
+        .alert("インポート完了", isPresented: $showImportSuccessAlert) {
+            Button("OK") { }
+        } message: {
+            Text("データのインポートが完了しました。")
+        }
+        .alert("インポートエラー", isPresented: $showImportErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text(importErrorMessage)
+        }
+        .sheet(isPresented: $showExportSheet) {
+            if let url = exportFileURL {
+                ShareSheet(activityItems: [url])
+            }
+        }
+        .fileImporter(
+            isPresented: $showImportPicker,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportResult(result)
+        }
     }
+    
+    // MARK: - View Components
+    
+    /// iCloud同期セクション
+    @ViewBuilder
+    private var iCloudSyncSection: some View {
+        Section {
+            Toggle(isOn: $iCloudSyncEnabled) {
+                Label("iCloud同期", systemImage: "icloud")
+            }
+            .onChange(of: iCloudSyncEnabled) { _, newValue in
+                handleICloudSyncToggle(newValue)
+            }
+            
+            iCloudStatusRow
+        } header: {
+            Text("クラウド同期")
+        } footer: {
+            Text("iCloud同期を有効にすると、同じApple IDでサインインしている他のデバイスとデータが自動的に同期されます。設定を変更した場合はアプリの再起動が必要です。")
+        }
+    }
+    
+    /// iCloud同期状態の行
+    @ViewBuilder
+    private var iCloudStatusRow: some View {
+        if iCloudSyncEnabled {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("同期が有効です")
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            HStack {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.orange)
+                Text("データはこのデバイスにのみ保存されます")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    
+    /// 手動バックアップセクション
+    @ViewBuilder
+    private var manualBackupSection: some View {
+        Section {
+            Button(action: exportData) {
+                exportButtonContent
+            }
+            
+            Button(action: { showImportPicker = true }) {
+                Label("データをインポート", systemImage: "square.and.arrow.down")
+            }
+        } header: {
+            Text("手動バックアップ")
+        } footer: {
+            Text("JSONファイル形式でデータをエクスポート・インポートできます。機種変更時やバックアップ用にご利用ください。")
+        }
+    }
+    
+    /// エクスポートボタンの内容
+    private var exportButtonContent: some View {
+        HStack {
+            Label("データをエクスポート", systemImage: "square.and.arrow.up")
+            Spacer()
+            Text("\(records.count)件の記録")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+        }
+    }
+    
+    /// データ概要セクション
+    @ViewBuilder
+    private var dataOverviewSection: some View {
+        Section("現在のデータ") {
+            HStack {
+                Text("喫煙記録")
+                Spacer()
+                Text("\(records.count)件")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("登録銘柄")
+                Spacer()
+                Text("\(brands.count)件")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    
+    /// インポート確認メッセージ
+    private var importConfirmMessage: String {
+        guard let data = pendingImportData,
+              let summary = BackupManager.shared.getBackupSummary(from: data) else {
+            return "既存のデータは上書きされます。"
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        let dateString = formatter.string(from: summary.exportDate)
+        return "既存のデータは上書きされます。\n\nバックアップ日時: \(dateString)\n記録数: \(summary.recordCount)件\n銘柄数: \(summary.brandCount)件"
+    }
+    
+    // MARK: - Actions
+    
+    /// iCloud同期トグルの変更を処理
+    private func handleICloudSyncToggle(_ enabled: Bool) {
+        SharedModelContainer.isICloudSyncEnabled = enabled
+        
+        if let settings = currentSettings {
+            settings.iCloudSyncEnabled = enabled
+            try? modelContext.save()
+        }
+        
+        showRestartAlert = true
+    }
+    
+    /// データをエクスポート
+    private func exportData() {
+        do {
+            let data = try BackupManager.shared.exportData(
+                records: records,
+                brands: brands,
+                settings: currentSettings
+            )
+            
+            let fileName = BackupManager.shared.generateExportFileName()
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            try data.write(to: tempURL)
+            
+            exportFileURL = tempURL
+            showExportSheet = true
+        } catch {
+            print("❌ エクスポートエラー: \(error)")
+        }
+    }
+    
+    /// インポート結果を処理
+    private func handleImportResult(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            
+            guard url.startAccessingSecurityScopedResource() else {
+                importErrorMessage = "ファイルへのアクセス権限がありません。"
+                showImportErrorAlert = true
+                return
+            }
+            
+            defer { url.stopAccessingSecurityScopedResource() }
+            
+            do {
+                let data = try Data(contentsOf: url)
+                _ = try BackupManager.shared.parseBackupData(from: data)
+                pendingImportData = data
+                showImportConfirmAlert = true
+            } catch {
+                importErrorMessage = "ファイルの読み込みに失敗しました: \(error.localizedDescription)"
+                showImportErrorAlert = true
+            }
+            
+        case .failure(let error):
+            importErrorMessage = "ファイルの選択に失敗しました: \(error.localizedDescription)"
+            showImportErrorAlert = true
+        }
+    }
+    
+    /// インポートを実行
+    private func performImport() {
+        guard let data = pendingImportData else { return }
+        
+        do {
+            let backupData = try BackupManager.shared.parseBackupData(from: data)
+            try BackupManager.shared.importData(backupData, to: modelContext, clearExisting: true)
+            showImportSuccessAlert = true
+        } catch {
+            importErrorMessage = "インポートに失敗しました: \(error.localizedDescription)"
+            showImportErrorAlert = true
+        }
+        
+        pendingImportData = nil
+    }
+}
+
+/// 共有シート（UIActivityViewController）
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

@@ -68,13 +68,17 @@
 | HST-003 | 履歴削除 | 誤って記録した履歴を個別に削除できる |
 | HST-004 | 間隔表示 | 前回の喫煙からの経過時間を表示 |
 
-### 3.7 HealthKit連携機能
+### 3.7 HealthKit連携機能（未実装・将来計画）
 
-| 機能ID | 機能名 | 詳細 |
-|--------|-------|------|
-| HLT-001 | HealthKit認証 | HealthKitへのアクセス許可を取得 |
-| HLT-002 | データ登録 | 喫煙データをHealthKitにカスタムデータとして登録 |
-| HLT-003 | 連携ON/OFF | HealthKit連携の有効/無効を切り替え |
+> [!NOTE]
+> 本機能は未実装です。データモデル（`AppSettings.healthKitEnabled`）のみ定義済みで、
+> HealthKitフレームワークの実際の連携処理は実装されていません。
+
+| 機能ID | 機能名 | 詳細 | 状態 |
+|--------|-------|------|------|
+| HLT-001 | HealthKit認証 | HealthKitへのアクセス許可を取得 | 未実装 |
+| HLT-002 | データ登録 | 喫煙データをHealthKitにカスタムデータとして登録 | 未実装 |
+| HLT-003 | 連携ON/OFF | HealthKit連携の有効/無効を切り替え | 未実装 |
 
 ### 3.8 データ同期機能
 
@@ -95,6 +99,16 @@
 | AIN-005 | 記事一覧表示 | カテゴリフィルター付きの記事一覧を表示 |
 | AIN-006 | 記事詳細表示 | 記事の詳細とAI要約を表示 |
 | AIN-007 | オフライン対応 | Foundation Modelsはオンデバイスで動作、オフラインでもAI機能利用可能 |
+
+### 3.10 リラックスモード機能
+
+| 機能ID | 機能名 | 詳細 |
+|--------|-------|------|
+| RLX-001 | リラックスモード起動 | ホーム画面の背景タップで全画面リラックスモードに切り替え |
+| RLX-002 | 背景エフェクト | 焚き火など癒し系パーティクルアニメーションを全画面表示（ランダム切替） |
+| RLX-003 | AI癒しメッセージ | Foundation Modelsで癒しメッセージを自動生成して表示 |
+| RLX-004 | リラックスモード解除 | 画面タップでリラックスモードを解除し通常画面に復帰 |
+| RLX-005 | ハプティクスフィードバック | Core Hapticsで「呼吸」のようなゆるやかな振動パターンを再生 |
 
 ## 4. 非機能要件
 
@@ -119,7 +133,7 @@
 | 項目 | 要件 |
 |-----|------|
 | データ暗号化 | iCloudの暗号化機能を利用 |
-| プライバシー | HealthKitデータへのアクセスは明示的な許可が必要 |
+| プライバシー | 個人の喫煙データはローカル/iCloud内に保持（HealthKit連携は将来計画） |
 
 ### 4.4 ユーザビリティ
 
@@ -148,7 +162,6 @@ graph TB
     subgraph DataLayer [Data Layer]
         SwiftData[SwiftData]
         iCloud[iCloud Sync]
-        HealthKit[HealthKit]
     end
     
     iPhoneApp --> SwiftData
@@ -156,7 +169,6 @@ graph TB
     WatchApp --> SwiftData
     WatchWidget --> SwiftData
     SwiftData <--> iCloud
-    iPhoneApp --> HealthKit
 ```
 
 ### 5.2 採用アーキテクチャ
@@ -182,7 +194,7 @@ graph TB
 | SCR-001 | ホーム画面 | 今日のカウント表示、カウントアップボタン、目標達成状況、今日の履歴（コンパクト表示） |
 | SCR-002 | AIニュース画面 | タバコ関連記事一覧、カテゴリフィルター、AI要約表示 |
 | SCR-003 | 統計画面 | 日別・月別・年間グラフ、金額集計 |
-| SCR-004 | 設定画面 | 銘柄設定、金額設定、目標本数設定、HealthKit連携 |
+| SCR-004 | 設定画面 | 銘柄設定、金額設定、目標本数設定 |
 | SCR-005 | 記事詳細画面 | 記事の詳細表示、AI要約の全文、関連記事 |
 
 ### 6.2 Apple Watch アプリ
@@ -294,7 +306,7 @@ erDiagram
 | フィールド | 型 | 説明 |
 |-----------|---|------|
 | id | UUID | 一意識別子 |
-| healthKitEnabled | Bool | HealthKit連携の有効/無効 |
+| healthKitEnabled | Bool | HealthKit連携の有効/無効（未実装・将来用に予約） |
 | activeBrandId | UUID | 現在選択中の銘柄ID |
 | dailyGoal | Int? | 1日の目標本数（nil: 目標未設定） |
 
@@ -306,7 +318,7 @@ erDiagram
 | UIフレームワーク | SwiftUI | - |
 | データ永続化 | SwiftData | - |
 | 同期 | CloudKit | - |
-| ヘルスケア | HealthKit | - |
+| ヘルスケア | HealthKit | -（未実装・将来計画） |
 | ウィジェット | WidgetKit | - |
 | グラフ描画 | Swift Charts | - |
 | AI/LLM | Foundation Models | iOS 26+ |
@@ -318,6 +330,7 @@ erDiagram
 
 | 機能 | 概要 |
 |-----|------|
+| HealthKit連携 | 喫煙データをHealthKitにカスタムデータとして登録・連携（データモデルのみ定義済み） |
 | 通知機能 | 目標達成時や一定時間経過時に通知 |
 | 複数銘柄対応 | 複数の銘柄を登録し、記録時に選択 |
 | データエクスポート | CSVやPDFでデータを出力 |

@@ -137,7 +137,7 @@ struct TipProductPlaceholderRow: View {
     private var placeholderPrice: String {
         switch tipProduct {
         case .coffee: return "¥120"
-        case .lunch: return "¥500"
+        case .cigarette: return "¥600"
         case .support: return "¥1,000"
         }
     }
@@ -226,7 +226,7 @@ struct TipJarSheetView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        Text("SmokeCounterは個人開発のアプリです。\nアプリが気に入ったら、開発者を応援してください。\nいただいた支援は、アプリの改善に活用させていただきます。")
+                        Text("Smokerは個人開発のアプリです。\nアプリが気に入ったら、開発者を応援してください。\nいただいた支援は、アプリの改善に活用させていただきます。")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

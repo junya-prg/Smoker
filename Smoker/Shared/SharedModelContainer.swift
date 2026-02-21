@@ -13,6 +13,9 @@ enum SharedModelContainer {
     /// App Group識別子
     static let appGroupIdentifier = "group.jp.junya.smoker.data"
     
+    /// iCloud同期設定のUserDefaultsキー
+    private static let iCloudSyncEnabledKey = "iCloudSyncEnabled"
+    
     /// App GroupのコンテナURL
     static var appGroupContainerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
@@ -21,6 +24,26 @@ enum SharedModelContainer {
     /// 共有データベースのURL
     static var databaseURL: URL? {
         appGroupContainerURL?.appendingPathComponent("SmokeCounter.sqlite")
+    }
+    
+    /// App GroupのUserDefaults
+    static var sharedUserDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
+    
+    /// iCloud同期が有効かどうか（UserDefaultsから取得、デフォルトtrue）
+    static var isICloudSyncEnabled: Bool {
+        get {
+            // 初回起動時はキーが存在しないのでデフォルトtrueを返す
+            guard let defaults = sharedUserDefaults else { return true }
+            if defaults.object(forKey: iCloudSyncEnabledKey) == nil {
+                return true
+            }
+            return defaults.bool(forKey: iCloudSyncEnabledKey)
+        }
+        set {
+            sharedUserDefaults?.set(newValue, forKey: iCloudSyncEnabledKey)
+        }
     }
     
     /// スキーマ
@@ -47,12 +70,16 @@ enum SharedModelContainer {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         }
         
+        // iCloud同期設定に応じてCloudKitの有効/無効を切り替え
+        let cloudKitDatabase: ModelConfiguration.CloudKitDatabase = isICloudSyncEnabled ? .automatic : .none
+        
         print("✅ App Groupデータベースを使用: \(url.path)")
+        print("☁️ iCloud同期: \(isICloudSyncEnabled ? "有効" : "無効")")
         
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             url: url,
-            cloudKitDatabase: .none  // CloudKitは一旦無効化
+            cloudKitDatabase: cloudKitDatabase
         )
         
         return try ModelContainer(for: schema, configurations: [modelConfiguration])

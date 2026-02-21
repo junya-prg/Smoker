@@ -30,6 +30,9 @@ struct HomeView: View {
     /// AI処理サービス
     @State private var aiService = FoundationModelsService()
     
+    /// ハプティクスサービス
+    @State private var hapticService = HapticService()
+    
     var body: some View {
         ZStack {
             // 背景エフェクト（常に表示）
@@ -167,6 +170,9 @@ struct HomeView: View {
     
     /// リラックスモードに入る
     private func enterRelaxMode() {
+        // ハプティクスフィードバックで「呼吸」パターンを再生
+        hapticService.playRelaxPattern()
+        
         // AIで癒しメッセージを生成
         Task {
             await aiService.ensureAIReady()

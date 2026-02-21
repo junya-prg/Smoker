@@ -249,9 +249,13 @@ struct StatisticsView: View {
         brandSummary = summary.sorted { $0.count > $1.count }
     }
     
-    /// 銘柄IDに基づいて色を返す
+    /// 銘柄IDに基づいて色を返す（allBrands内のインデックスで決定し、衝突を防ぐ）
     private func brandColor(for id: UUID) -> Color {
         let colors: [Color] = [.orange, .green, .purple, .pink, .cyan, .indigo, .mint, .teal]
+        if let brandIndex = allBrands.firstIndex(where: { $0.id == id }) {
+            return colors[brandIndex % colors.count]
+        }
+        // allBrandsに存在しない（削除済み）銘柄はhashValueでフォールバック
         let index = abs(id.hashValue) % colors.count
         return colors[index]
     }
@@ -1062,20 +1066,24 @@ struct StackedBarView: View {
                         )
                     )
                     .frame(width: width, height: animate ? totalHeight : 0)
+                    // 高さのみアニメーション（fillの後ではなくframeの後に付けることで色はアニメーション対象外）
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: animate)
             } else {
                 // 銘柄別に積み上げ
                 ForEach(segments.reversed()) { segment in
                     let segmentHeight = totalCount > 0 ? (CGFloat(segment.count) / CGFloat(totalCount)) * totalHeight : 0
                     
                     Rectangle()
-                        .fill(segment.color)
+                        .fill(segment.color)  // 色はアニメーション対象外（即座に反映）
                         .frame(width: width, height: animate ? segmentHeight : 0)
+                        // 高さのみアニメーション
+                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: animate)
                 }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: width / 3))
         .shadow(color: isSelected ? (isOverGoal ? Color.red : Color.blue).opacity(0.5) : .clear, radius: 4, x: 0, y: 2)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double.random(in: 0...0.2)), value: animate)
+        // VStack全体にanimationを付けると色もアニメーション対象になるため削除
     }
 }
 
@@ -1285,9 +1293,10 @@ struct BarView: View {
                     endPoint: .bottom
                 )
             )
+            // 高さのみアニメーション（fillの後ではなくframeの後に付けることで色はアニメーション対象外）
             .frame(width: width, height: animate ? barHeight : 0)
+            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: animate)
             .shadow(color: isSelected ? (isOverGoal ? Color.red : Color.blue).opacity(0.5) : .clear, radius: 4, x: 0, y: 2)
-            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double.random(in: 0...0.2)), value: animate)
     }
 }
 
@@ -1548,6 +1557,9 @@ struct BrandLegendView: View {
     
     private func brandColor(for id: UUID) -> Color {
         let colors: [Color] = [.orange, .green, .purple, .pink, .cyan, .indigo, .mint, .teal]
+        if let brandIndex = brands.firstIndex(where: { $0.id == id }) {
+            return colors[brandIndex % colors.count]
+        }
         let index = abs(id.hashValue) % colors.count
         return colors[index]
     }

@@ -9,25 +9,26 @@ import Foundation
 import SwiftData
 
 /// タバコの銘柄を表すモデル
+/// CloudKit互換のため、すべてのプロパティにデフォルト値を設定
 @Model
 final class CigaretteBrand {
     /// 一意識別子
-    var id: UUID
+    var id: UUID = UUID()
     
     /// 銘柄名
-    var name: String
+    var name: String = ""
     
     /// 1箱あたりの本数
-    var countPerPack: Int
+    var countPerPack: Int = 20
     
     /// 1箱あたりの価格
-    var pricePerPack: Decimal
+    var pricePerPack: Decimal = 0
     
     /// 現在使用中かどうか
-    var isActive: Bool
+    var isActive: Bool = true
     
     /// 作成日時
-    var createdAt: Date
+    var createdAt: Date = Date()
     
     /// デフォルト銘柄かどうか（ウィジェットからのカウントアップ時に使用）
     /// オプショナルにすることでマイグレーション時にnilが設定される

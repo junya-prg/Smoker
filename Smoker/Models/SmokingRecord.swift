@@ -9,16 +9,17 @@ import Foundation
 import SwiftData
 
 /// 個々の喫煙記録を表すモデル
+/// CloudKit互換のため、すべてのプロパティにデフォルト値を設定
 @Model
 final class SmokingRecord {
     /// 一意識別子
-    var id: UUID
+    var id: UUID = UUID()
     
     /// 喫煙日時
-    var timestamp: Date
+    var timestamp: Date = Date()
     
     /// カウント数（通常は1）
-    var count: Int
+    var count: Int = 1
     
     /// 記録時の銘柄ID（nilの場合は未分類）
     var brandId: UUID?
