@@ -33,12 +33,25 @@ struct TipJarView: View {
                     Spacer()
                 }
             } else if tipJarManager.products.isEmpty {
-                // 商品がない場合（開発中のプレースホルダー）
+                // 商品が読み込めなかった場合
                 VStack(spacing: 12) {
-                    ForEach(TipProduct.allCases) { tipProduct in
-                        TipProductPlaceholderRow(tipProduct: tipProduct)
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text("商品情報を読み込めませんでした")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        Task {
+                            await tipJarManager.loadProducts()
+                        }
+                    } label: {
+                        Label("再読み込み", systemImage: "arrow.clockwise")
                     }
+                    .buttonStyle(.bordered)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
             } else {
                 // 実際の商品
                 VStack(spacing: 12) {
@@ -129,55 +142,6 @@ struct TipProductRow: View {
     }
 }
 
-/// チップ商品行（プレースホルダー - 開発中用）
-struct TipProductPlaceholderRow: View {
-    let tipProduct: TipProduct
-    
-    /// プレースホルダー価格
-    private var placeholderPrice: String {
-        switch tipProduct {
-        case .coffee: return "¥120"
-        case .cigarette: return "¥600"
-        case .support: return "¥1,000"
-        }
-    }
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // アイコン
-            Image(systemName: tipProduct.iconName)
-                .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 40, height: 40)
-                .background(Color.blue.opacity(0.1))
-                .clipShape(Circle())
-            
-            // 商品情報
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tipProduct.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text(tipProduct.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-            
-            // 価格表示（プレースホルダー）
-            Text(placeholderPrice)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .frame(width: 70)
-                .padding(.vertical, 8)
-                .background(Color.blue)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .padding(.vertical, 4)
-        .opacity(0.6)
-    }
-}
 
 /// 設定画面用のチップセクション
 struct TipJarSection: View {
