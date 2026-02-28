@@ -92,9 +92,9 @@ struct HomeView: View {
                                     viewModel.addSmokingRecord(modelContext: modelContext, brand: brand)
                                 },
                                 onDecrement: {
-                                    viewModel.removeLastRecord(modelContext: modelContext)
+                                    viewModel.removeLastRecord(modelContext: modelContext, brandId: viewModel.selectedBrandId)
                                 },
-                                canDecrement: viewModel.todayCount > 0,
+                                canDecrement: viewModel.selectedBrandId == nil ? viewModel.todayCount > 0 : viewModel.selectedBrandCount > 0,
                                 selectedBrandName: viewModel.selectedBrandId == nil
                                     ? nil
                                     : viewModel.allBrands.first { $0.id == viewModel.selectedBrandId }?.name

@@ -144,10 +144,10 @@ struct CategoryFilterView: View {
     
     private func categoryColor(for category: ArticleCategory) -> Color {
         switch category {
-        case .quitting: return .green
-        case .health: return .red
         case .newProducts: return .blue
         case .industry: return .orange
+        case .trivia: return .purple
+        case .quitting: return .green
         case .other: return .gray
         }
     }
@@ -334,10 +334,10 @@ struct CategoryBadge: View {
     
     private var color: Color {
         switch category {
-        case .quitting: return .green
-        case .health: return .red
         case .newProducts: return .blue
         case .industry: return .orange
+        case .trivia: return .purple
+        case .quitting: return .green
         case .other: return .gray
         }
     }

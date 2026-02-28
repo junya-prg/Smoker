@@ -289,7 +289,8 @@ class HomeViewModel {
     
     /// 喫煙記録を1つ減らす（誤操作時用）
     /// - Parameter modelContext: SwiftDataのModelContext（未使用、互換性のため残す）
-    func removeLastRecord(modelContext: ModelContext) {
+    /// - Parameter brandId: 削除対象の銘柄ID（nilの場合は全体から最新を削除）
+    func removeLastRecord(modelContext: ModelContext, brandId: UUID? = nil) {
         guard todayCount > 0 else { return }
         
         let calendar = Calendar.current
@@ -301,8 +302,17 @@ class HomeViewModel {
             let container = try SharedModelContainer.createContainer()
             let context = ModelContext(container)
             
-            let predicate = #Predicate<SmokingRecord> { record in
-                record.timestamp >= startOfToday && record.timestamp < endOfToday
+            let predicate: Predicate<SmokingRecord>
+            if let targetBrandId = brandId {
+                // 特定の銘柄の記録のみを対象にする
+                predicate = #Predicate<SmokingRecord> { record in
+                    record.timestamp >= startOfToday && record.timestamp < endOfToday && record.brandId == targetBrandId
+                }
+            } else {
+                // 全体から最新の記録を対象にする
+                predicate = #Predicate<SmokingRecord> { record in
+                    record.timestamp >= startOfToday && record.timestamp < endOfToday
+                }
             }
             
             let descriptor = FetchDescriptor<SmokingRecord>(

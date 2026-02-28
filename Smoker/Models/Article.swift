@@ -9,10 +9,10 @@ import Foundation
 
 /// 記事のカテゴリ
 enum ArticleCategory: String, CaseIterable, Codable, Identifiable {
-    case quitting = "節煙"
-    case health = "健康"
     case newProducts = "新商品"
     case industry = "業界"
+    case trivia = "豆知識"
+    case quitting = "節煙"
     case other = "その他"
     
     var id: String { rawValue }
@@ -20,14 +20,14 @@ enum ArticleCategory: String, CaseIterable, Codable, Identifiable {
     /// カテゴリに対応するSF Symbolsアイコン名
     var iconName: String {
         switch self {
-        case .quitting:
-            return "arrow.down.heart"
-        case .health:
-            return "heart.text.square"
         case .newProducts:
             return "sparkles"
         case .industry:
             return "building.2"
+        case .trivia:
+            return "book.fill"
+        case .quitting:
+            return "arrow.down.heart"
         case .other:
             return "doc.text"
         }
@@ -36,14 +36,14 @@ enum ArticleCategory: String, CaseIterable, Codable, Identifiable {
     /// カテゴリの色
     var color: String {
         switch self {
-        case .quitting:
-            return "green"
-        case .health:
-            return "red"
         case .newProducts:
             return "blue"
         case .industry:
             return "orange"
+        case .trivia:
+            return "purple"
+        case .quitting:
+            return "green"
         case .other:
             return "gray"
         }
@@ -154,13 +154,13 @@ extension Article {
             isAIProcessed: true
         ),
         Article(
-            title: "電子タバコの健康リスク、最新研究で明らかに",
+            title: "電子タバコの最新動向、業界の変化を追う",
             source: "朝日新聞",
             publishedAt: Date().addingTimeInterval(-7200),
             url: URL(string: "https://example.com/article2")!,
-            description: "電子タバコの長期使用による健康への影響について、新たな研究結果が発表された。",
-            aiSummary: "電子タバコは従来のタバコより有害物質が少ないものの、完全に安全ではないことが判明。特に若年層への影響が懸念されています。",
-            category: .health,
+            description: "電子タバコ市場の最新動向について、業界の変化をまとめた。",
+            aiSummary: "電子タバコ市場は急速に拡大中。各メーカーが新技術を投入し、競争が激化しています。",
+            category: .industry,
             relevanceScore: 0.72,
             isAIProcessed: true
         ),
@@ -195,6 +195,17 @@ extension Article {
             aiSummary: "世界の成人喫煙率は過去20年で約30%減少。日本も例外ではなく、特に若年層での喫煙離れが顕著です。",
             category: .industry,
             relevanceScore: 0.78,
+            isAIProcessed: true
+        ),
+        Article(
+            title: "タバコの歴史：コロンブスが持ち帰った一本から",
+            source: "歴史チャンネル",
+            publishedAt: Date().addingTimeInterval(-57600),
+            url: URL(string: "https://example.com/article6")!,
+            description: "タバコが世界に広まった歴史を紐解く。コロンブスの新大陸発見から現代まで。",
+            aiSummary: "15世紀にコロンブスが新大陸でタバコを発見。当初は薬草としてヨーロッパに伝わり、その後嘉好品として世界中に広まりました。",
+            category: .trivia,
+            relevanceScore: 0.82,
             isAIProcessed: true
         )
     ]

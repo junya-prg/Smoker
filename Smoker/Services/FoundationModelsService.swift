@@ -136,10 +136,10 @@ class FoundationModelsService: ObservableObject {
         let session = LanguageModelSession(instructions: """
             あなたはニュース記事をカテゴリ分類するアシスタントです。
             以下のカテゴリのいずれかを選んで、カテゴリ名のみを回答してください：
-            - 節煙（禁煙、減煙、節煙に関する記事）
-            - 健康（健康への影響、病気、リスクに関する記事）
             - 新商品（新製品、新デバイス、発売に関する記事）
             - 業界（税金、規制、市場、業界動向に関する記事）
+            - 豆知識（タバコの歴史、豆知識、文化、トリビア、うんちくに関する記事）
+            - 節煙（禁煙、減煙、節煙に関する記事）
             - その他（上記に該当しない記事）
             """)
         
@@ -185,14 +185,34 @@ class FoundationModelsService: ObservableObject {
         let trendInfo = userData.isDecreasing ? "減少傾向" : "変化なし"
         
         let session = LanguageModelSession(instructions: """
-            あなたは喫煙者向けニュースのおすすめ度を評価するアシスタントです。
-            ユーザーの喫煙状況を考慮して、記事の関連性を0から100の数値で評価してください。
+            あなたはタバコを楽しむ喫煙者向けニュースのおすすめ度を評価するアシスタントです。
+            以下の基準でユーザーの喫煙状況を考慮して、記事の関連性を0から100の数値で評価してください。
+            
+            【高スコア（70〜100）にすべき記事】
+            - タバコの新商品・新デバイス情報
+            - 加熱式タバコやシガーのレビュー・比較
+            - タバコ文化・嗜好品としての楽しみ方
+            - タバコの歴史・豆知識・トリビア
+            - 喫煙スポット・喫煙所情報
+            - タバコ業界の面白いニュース
+            - 喫煙者のライフスタイル・コミュニティ
+            
+            【中スコア（30〜60）にすべき記事】
+            - タバコの税金・値上げ情報
+            - 喫煙規制の動向（喫煙者に影響する情報として）
+            - 一般的なタバコ関連統計
+            
+            【低スコア（0〜30）にすべき記事】
+            - 禁煙を強く推進する内容
+            - 健康リスクの警告・恐怖を煽る内容
+            - 喫煙者を否定する論調の記事
+            
             数値のみを回答してください。
             """)
         
         do {
             let response = try await session.respond(to: """
-                以下のユーザーにとって、この記事がどれくらい関連性が高いか評価してください。
+                以下のユーザーにとって、この記事がどれくらいおすすめか評価してください。
                 
                 【ユーザー情報】
                 - 1日の平均喫煙本数: \(userData.averageDailyCount)本
@@ -445,41 +465,50 @@ class FoundationModelsService: ObservableObject {
     private func fallbackCategorize(article: Article) -> ArticleCategory {
         let text = (article.title + " " + (article.description ?? "")).lowercased()
         
-        if text.contains("禁煙") || text.contains("節煙") || text.contains("減煙") || text.contains("やめ") {
-            return .quitting
-        } else if text.contains("健康") || text.contains("病気") || text.contains("リスク") || text.contains("害") || text.contains("肺") {
-            return .health
-        } else if text.contains("新") || text.contains("発売") || text.contains("新商品") || text.contains("製品") || text.contains("デバイス") {
+        if text.contains("新") || text.contains("発売") || text.contains("新商品") || text.contains("製品") || text.contains("デバイス") {
             return .newProducts
         } else if text.contains("税") || text.contains("値上げ") || text.contains("業界") || text.contains("市場") || text.contains("規制") {
             return .industry
+        } else if text.contains("歴史") || text.contains("文化") || text.contains("豆知識") || text.contains("トリビア") || text.contains("うんちく") || text.contains("起源") {
+            return .trivia
+        } else if text.contains("禁煙") || text.contains("節煙") || text.contains("減煙") || text.contains("やめ") {
+            return .quitting
         }
         return .other
     }
     
     /// シンプルなおすすめ度計算（フォールバック）
+    /// タバコを楽しむ喫煙者向けにスコアリング
     private func fallbackCalculateRelevance(article: Article, userData: UserSmokingData?) -> Double {
         var score = 0.5
         let text = (article.title + " " + (article.description ?? "")).lowercased()
         
-        if let userData = userData {
-            if userData.dailyGoal != nil {
-                if text.contains("禁煙") || text.contains("節煙") {
-                    score += 0.3
-                }
-            }
-            if userData.averageDailyCount > 15 {
-                if text.contains("健康") || text.contains("リスク") {
-                    score += 0.2
-                }
-            }
-            if userData.isDecreasing {
-                if text.contains("成功") || text.contains("コツ") {
-                    score += 0.2
-                }
-            }
+        // 楽しいタバコ情報に加点
+        if text.contains("新商品") || text.contains("新製品") || text.contains("発売") || text.contains("新型") {
+            score += 0.3
+        }
+        if text.contains("レビュー") || text.contains("比較") || text.contains("おすすめ") {
+            score += 0.25
+        }
+        if text.contains("iqos") || text.contains("ploom") || text.contains("glo") || text.contains("シガー") || text.contains("葉巻") {
+            score += 0.2
+        }
+        if text.contains("文化") || text.contains("楽しみ") || text.contains("嗜好") || text.contains("味わい") || text.contains("フレーバー") {
+            score += 0.2
+        }
+        if text.contains("喫煙所") || text.contains("喫煙スポット") {
+            score += 0.15
         }
         
+        // 禁煙推進・健康リスク警告系は減点
+        if text.contains("禁煙") || text.contains("節煙") || text.contains("やめ") {
+            score -= 0.2
+        }
+        if text.contains("健康被害") || text.contains("リスク") || text.contains("警告") || text.contains("有害") {
+            score -= 0.15
+        }
+        
+        // 新しい記事に加点
         let hoursSincePublished = Date().timeIntervalSince(article.publishedAt) / 3600
         if hoursSincePublished < 24 {
             score += 0.1
