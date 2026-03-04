@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.8;
@@ -18,12 +20,14 @@
             min-height: 100vh;
             padding: 20px;
         }
+
         .container {
             max-width: 600px;
             margin: 0 auto;
             text-align: center;
             padding-top: 60px;
         }
+
         .app-icon {
             width: 120px;
             height: 120px;
@@ -36,17 +40,20 @@
             font-size: 60px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
+
         h1 {
             font-size: 42px;
             color: #fff;
             margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
+
         .tagline {
             font-size: 18px;
             color: rgba(255, 255, 255, 0.9);
             margin-bottom: 40px;
         }
+
         .card {
             background-color: #fff;
             border-radius: 16px;
@@ -54,19 +61,23 @@
             margin-bottom: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
+
         .card h2 {
             font-size: 20px;
             color: #1a1a1a;
             margin-bottom: 20px;
         }
+
         .features {
             text-align: left;
         }
+
         .feature-item {
             display: flex;
             align-items: center;
             margin-bottom: 15px;
         }
+
         .feature-icon {
             width: 40px;
             height: 40px;
@@ -78,22 +89,27 @@
             margin-right: 15px;
             font-size: 20px;
         }
+
         .feature-text {
             flex: 1;
         }
+
         .feature-text strong {
             display: block;
             color: #1a1a1a;
         }
+
         .feature-text span {
             font-size: 14px;
             color: #666;
         }
+
         .links {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
+
         .link-btn {
             display: block;
             padding: 15px 20px;
@@ -104,16 +120,20 @@
             font-weight: 500;
             transition: background-color 0.2s;
         }
+
         .link-btn:hover {
             background-color: #e8e8e8;
         }
+
         .link-btn.primary {
             background-color: #007AFF;
             color: #fff;
         }
+
         .link-btn.primary:hover {
             background-color: #0056b3;
         }
+
         .footer {
             margin-top: 40px;
             color: rgba(255, 255, 255, 0.7);
@@ -121,11 +141,12 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="app-icon">🚬</div>
         <h1>Smoker</h1>
-        <p class="tagline">シンプルな喫煙記録アプリ</p>
+        <p class="tagline">愛煙家のための喫煙ライフサポート</p>
 
         <div class="card">
             <h2>主な機能</h2>
@@ -141,7 +162,21 @@
                     <div class="feature-icon">📊</div>
                     <div class="feature-text">
                         <strong>統計表示</strong>
-                        <span>日別/週別/月別のデータ確認</span>
+                        <span>日別/週別/月別/年別のデータ確認</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📰</div>
+                    <div class="feature-text">
+                        <strong>AIニュース</strong>
+                        <span>タバコ関連ニュースをAI要約でお届け</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🌿</div>
+                    <div class="feature-text">
+                        <strong>リラックスモード</strong>
+                        <span>エフェクトとハプティクスで癒し体験</span>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -165,11 +200,13 @@
             <div class="links">
                 <a href="support.html" class="link-btn primary">サポート・お問い合わせ</a>
                 <a href="privacy-policy.html" class="link-btn">プライバシーポリシー</a>
-                <a href="https://github.com/junya-prg/Smoker" target="_blank" rel="noopener noreferrer" class="link-btn">GitHub</a>
+                <a href="https://github.com/junya-prg/Smoker" target="_blank" rel="noopener noreferrer"
+                    class="link-btn">GitHub</a>
             </div>
         </div>
 
         <p class="footer">© 2026 Smoker App</p>
     </div>
 </body>
+
 </html>
