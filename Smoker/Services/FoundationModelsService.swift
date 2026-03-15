@@ -103,13 +103,13 @@ class FoundationModelsService: ObservableObject {
             あなたはニュース記事の要約を作成するアシスタントです。
             以下のルールに従って要約してください：
             - 日本語で2-3文で簡潔に要約
-            - 喫煙者にとって重要なポイントを強調
+            - 自己管理の観点から重要なポイントを強調
             - 客観的な情報のみを含める
             """)
         
         do {
             let response = try await session.respond(to: """
-                以下のタバコ関連ニュース記事を要約してください。
+                以下のニュース記事を要約してください。
                 
                 タイトル: \(article.title)
                 内容: \(content)
@@ -185,27 +185,25 @@ class FoundationModelsService: ObservableObject {
         let trendInfo = userData.isDecreasing ? "減少傾向" : "変化なし"
         
         let session = LanguageModelSession(instructions: """
-            あなたはタバコを楽しむ喫煙者向けニュースのおすすめ度を評価するアシスタントです。
-            以下の基準でユーザーの喫煙状況を考慮して、記事の関連性を0から100の数値で評価してください。
+            あなたは喫煙ペースをコントロールしたい人向けのニュースおすすめ度を評価するアシスタントです。
+            以下の基準でユーザーの状況を考慮して、記事の関連性を0から100の数値で評価してください。
             
             【高スコア（70〜100）にすべき記事】
-            - タバコの新商品・新デバイス情報
-            - 加熱式タバコやシガーのレビュー・比較
-            - タバコ文化・嗜好品としての楽しみ方
+            - 節煙・ペースコントロールに役立つ情報
+            - ニコチンフリー製品・代替製品の情報
+            - 加熱式デバイスの新商品・レビュー
+            - 喫煙量の管理・コントロールに関する記事
             - タバコの歴史・豆知識・トリビア
-            - 喫煙スポット・喫煙所情報
-            - タバコ業界の面白いニュース
-            - 喫煙者のライフスタイル・コミュニティ
+            - 業界の最新動向
             
             【中スコア（30〜60）にすべき記事】
             - タバコの税金・値上げ情報
-            - 喫煙規制の動向（喫煙者に影響する情報として）
-            - 一般的なタバコ関連統計
+            - 喫煙規制の動向
+            - 一般的な統計情報
             
             【低スコア（0〜30）にすべき記事】
-            - 禁煙を強く推進する内容
-            - 健康リスクの警告・恐怖を煽る内容
-            - 喫煙者を否定する論調の記事
+            - 具体的な内容に乏しい記事
+            - ユーザーの自己管理に無関係な記事
             
             数値のみを回答してください。
             """)
@@ -267,7 +265,7 @@ class FoundationModelsService: ObservableObject {
         }
         
         let session = LanguageModelSession(instructions: """
-            あなたは喫煙者を癒すメッセージを作成するアシスタントです。
+            あなたはリラックスしたい人を癒すメッセージを作成するアシスタントです。
             以下のルールに従ってください：
             - 日本語で短い（10文字以内程度）癒しのフレーズを1つだけ生成
             - 穏やかで詩的な表現
@@ -277,7 +275,7 @@ class FoundationModelsService: ObservableObject {
         
         do {
             let response = try await session.respond(to: """
-                タバコを吸いながらリラックスしている人に向けた、短い癒しのフレーズを1つ生成してください。
+                ひと息つきたいときに表示する、短い癒しのフレーズを1つ生成してください。
                 「ゆっくりと...」「この瞬間を味わって」のような感じで。
                 """)
             let message = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -478,12 +476,12 @@ class FoundationModelsService: ObservableObject {
     }
     
     /// シンプルなおすすめ度計算（フォールバック）
-    /// タバコを楽しむ喫煙者向けにスコアリング
+    /// 喫煙ペース管理者向けにスコアリング
     private func fallbackCalculateRelevance(article: Article, userData: UserSmokingData?) -> Double {
         var score = 0.5
         let text = (article.title + " " + (article.description ?? "")).lowercased()
         
-        // 楽しいタバコ情報に加点
+        // 関連性の高い情報に加点
         if text.contains("新商品") || text.contains("新製品") || text.contains("発売") || text.contains("新型") {
             score += 0.3
         }
@@ -500,9 +498,9 @@ class FoundationModelsService: ObservableObject {
             score += 0.15
         }
         
-        // 禁煙推進・健康リスク警告系は減点
-        if text.contains("禁煙") || text.contains("節煙") || text.contains("やめ") {
-            score -= 0.2
+        // 節煙・コントロール関連に加点
+        if text.contains("禁煙") || text.contains("節煙") || text.contains("コントロール") || text.contains("管理") {
+            score += 0.15
         }
         if text.contains("健康被害") || text.contains("リスク") || text.contains("警告") || text.contains("有害") {
             score -= 0.15

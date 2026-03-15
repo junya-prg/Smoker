@@ -111,7 +111,7 @@ struct HomeView: View {
                     .onTapGesture {
                         enterRelaxMode()
                     }
-                    .navigationTitle("今日の喫煙")
+                    .navigationTitle("今日の記録")
                 }
             }
             

@@ -24,7 +24,7 @@ enum TipProduct: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .coffee: return "コーヒー1杯"
-        case .cigarette: return "タバコ代"
+        case .cigarette: return "開発サポート"
         case .support: return "応援サポート"
         }
     }
@@ -42,7 +42,7 @@ enum TipProduct: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .coffee: return "開発者にコーヒーを奢る"
-        case .cigarette: return "開発者のタバコ代を支援"
+        case .cigarette: return "開発者を応援する"
         case .support: return "アプリ開発を応援する"
         }
     }

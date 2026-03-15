@@ -24,7 +24,7 @@ class ArticleFetchService: ObservableObject {
     private let googleNewsRSSBaseURL = "https://news.google.com/rss/search"
     
     /// 検索キーワード
-    private let searchKeywords = ["タバコ", "喫煙", "加熱式タバコ", "IQOS", "PloomX", "シガー", "葉巻", "タバコ 歴史", "タバコ 文化"]
+    private let searchKeywords = ["タバコ", "喫煙", "加熱式タバコ", "IQOS", "PloomX", "シガー", "葉巻", "タバコ 歴史", "タバコ 文化", "ニコチンフリー", "禁煙", "節煙"]
     
     /// キャッシュ用のUserDefaultsキー
     private let cacheKey = "cachedArticles"

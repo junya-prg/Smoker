@@ -64,7 +64,7 @@ struct SplashScreenView: View {
                         )
                         .shadow(color: Color.orange.opacity(0.3), radius: 8, x: 0, y: 2)
                     
-                    Text("— 愛煙家のための記録 —")
+                    Text("— あなたのペースを、あなたの手に —")
                         .font(.custom("Avenir Next", size: 13).weight(.medium))
                         .tracking(2)
                         .foregroundStyle(Color.white.opacity(0.5))
