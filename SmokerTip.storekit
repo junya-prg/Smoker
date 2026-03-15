@@ -35,13 +35,13 @@
       "internalID" : "6759395988",
       "localizations" : [
         {
-          "description" : "開発者のタバコ代を支援します",
-          "displayName" : "タバコ代",
+          "description" : "開発者を応援します",
+          "displayName" : "開発サポート",
           "locale" : "ja"
         }
       ],
       "productID" : "tip_cigarette",
-      "referenceName" : "タバコ代",
+      "referenceName" : "開発サポート",
       "type" : "Consumable"
     },
     {
